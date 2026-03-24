@@ -154,7 +154,6 @@ def clusteriser_pipelineClassique(df, titres):
     resume_classique.to_excel("resume_pipelineClassique.xlsx", index=False)
     # Sauvgarder les données avec les nouvelles colonnes 'id_sujet' et 'nom_sujet'
     df.to_excel("clustering_pipelineClassique.xlsx", index=False)      
-
     print("Les fichiers du pipeline classique ont été sauvegardés !")
 
     # Affichage du résultat final
