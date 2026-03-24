@@ -6,7 +6,7 @@ from clustering import charger_donnees, clusteriser_bertopic, clusteriser_pipeli
 
 if __name__ == "__main__":
     # Charger les données
-    df, titres = charger_donnees("sorted_data.xlsx")
+    df, titres = charger_donnees("data/sorted_data.xlsx")
 
     # Clusterisation avec BERTopic
     df_bertopic, resume_bertopic = clusteriser_bertopic(df.copy(), titres)
