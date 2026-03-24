@@ -1,0 +1,16 @@
+Comparer les 2 méthodes de clustering : 
+    - quelle métrique choisir?
+    - La Cohérence des Sujets (Topic Coherence) : 
+            - C'est la métrique du Topic Modeling. 
+            - Elle mesure si les mots qui définissent un cluster apparaissent souvent ensemble dans le langage courant.
+            - Un score élevé signifie que le sujet est logiquement humainement compréhensible.
+
+    - La Diversité des Sujets (Topic Diversity) : 
+            - Calcule le pourcentage de mots uniques parmi tous les mots-clés de tous tes clusters.
+            - Si tes deux méthodes créent 10 sujets, mais qu'ils partagent tous les mots "transition" et "énergie", la diversité est faible. Une bonne méthode doit séparer clairement les thématiques.
+
+    - Le Ratio de Bruit : 
+            - Regarder le pourcentage d'articles classés dans le sujet -1. 
+
+    - La cosommation énergitique :
+            - Utiliser Code Carbone

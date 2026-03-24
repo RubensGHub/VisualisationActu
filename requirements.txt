@@ -5,3 +5,4 @@ hdbscan
 pandas
 numpy
 scikit-learn
+openpyxl
