@@ -115,7 +115,7 @@ def clusteriser_bertopic(df, titres):
         pbar.update(1)
 
         umap_params = {
-            "n_neighbors": 10,
+            "n_neighbors": 20,
             "n_components": 5,
             "metric": "cosine",
             "random_state": 42
