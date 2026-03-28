@@ -4,10 +4,14 @@ from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
 from umap import UMAP
 from hdbscan import HDBSCAN
+from tqdm import tqdm
+import hashlib
+import json
+import numpy as np
+import os
 import nltk
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer
-
 from bokeh.plotting import figure, output_file, save
 from bokeh.models import (
     ColumnDataSource,
@@ -20,12 +24,27 @@ from bokeh.models import (
 from bokeh.layouts import row
 from bokeh.palettes import Turbo256
 
-OUTPUT_DIR = "data/output"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 nltk.download('stopwords', quiet=True)
 mots_vides_fr = stopwords.words('french')
 mots_vides_fr.extend(['euros', 'euro', 'dollars', 'dollar', 'milliards', 'millions', 'mds', 'plus', 'très', 'cette', 'cet', 'comme', 'tout', 'faire', 'ça', 'ont', 'être'])
+
+
+
+OUTPUT_DIR = "data/output"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+def get_umap_hash(params):
+    param_str = json.dumps(params, sort_keys=True)
+    return hashlib.md5(param_str.encode()).hexdigest()
+
+def get_embedding_hash(titres, model_name):
+    data = {
+        "model": model_name,
+        "titres": titres  
+    }
+    data_str = json.dumps(data, sort_keys=True)
+    return hashlib.md5(data_str.encode()).hexdigest()
 
 
 def charger_donnees(path):
@@ -40,6 +59,49 @@ def charger_donnees(path):
     return df, titres
 
 
+def compute_or_load_umap(embeddings, umap_params, cache_dir="cache"):
+    os.makedirs(cache_dir, exist_ok=True)
+
+    # Hash basé sur les paramètres
+    hash_id = get_umap_hash(umap_params)
+    cache_file = f"{cache_dir}/umap_{hash_id}.npy"
+
+    if os.path.exists(cache_file):
+        print("Chargement UMAP depuis le cache...")
+        return np.load(cache_file)
+
+    print("Calcul UMAP...")
+    umap_model = UMAP(**umap_params)
+    reduced = umap_model.fit_transform(embeddings)
+
+    np.save(cache_file, reduced)
+    print("UMAP sauvegardé.")
+
+    return reduced
+
+
+def compute_or_load_embeddings(titres, model, cache_dir="cache"):
+    os.makedirs(cache_dir, exist_ok=True)
+
+    model_name = model.get_sentence_embedding_dimension()  # ou nom manuel
+    hash_id = get_embedding_hash(titres, str(model_name))
+
+    cache_file = f"{cache_dir}/embeddings_{hash_id}.npy"
+
+    if os.path.exists(cache_file):
+        print("Chargement des embeddings depuis le cache...")
+        return np.load(cache_file)
+
+    print("Calcul des embeddings...")
+    embeddings = model.encode(titres, show_progress_bar=True)
+
+    np.save(cache_file, embeddings)
+    print("Embeddings sauvegardés.")
+
+    return embeddings
+
+
+    
 def clusteriser_bertopic(df, titres):
     """"
     Clusterisation avec BERTopic :
@@ -57,69 +119,85 @@ def clusteriser_bertopic(df, titres):
         stop_words=mots_vides_fr,
         token_pattern=r"(?u)\b[a-zA-ZÀ-ÿ]{3,}\b" # Ignore les nombres et garde les mots >= 3 lettres
     )
+    steps = [
+        "Chargement du modèle d'embedding",
+        "Création UMAP",
+        "Création HDBSCAN",
+        "Initialisation BERTopic",
+        "Entraînement BERTopic",
+        "Réduction des outliers",
+        "Mise à jour des topics",
+        "Post-traitement DataFrame",
+        "Sauvegarde"
+    ]
 
-    # Choix du modèle d'embedding multilingue pour mieux gérer les titres en français
-    embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+    with tqdm(total=len(steps), desc="Pipeline BERTopic") as pbar:
 
-    # UMAP personnalisé : n_neighbors bas pour capter les petits groupes
-    umap_model = UMAP(
-        n_neighbors=10,
-        n_components=5,
-        metric='cosine',
-        random_state=42
-    )
+        embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+        embeddings = compute_or_load_embeddings(titres, embedding_model)
+        pbar.update(1)
 
-    # HDBSCAN : min_cluster_size élevé pour éviter les micro-clusters
-    hdbscan_model = HDBSCAN(
-        min_cluster_size=50,
-        min_samples=5,
-        metric='euclidean',
-        prediction_data=True
-    )
+        umap_params = {
+            "n_neighbors": 20,
+            "n_components": 5,
+            "metric": "cosine",
+            "random_state": 42
+        }
 
-    # Initialisation et entraînement de BERTopic
-    topic_model = BERTopic(
-        embedding_model=embedding_model,
-        umap_model=umap_model,
-        hdbscan_model=hdbscan_model,
-        vectorizer_model=vectorizer_model,
-        min_topic_size=50,
-        language="multilingual"
-    )
-    topics, _ = topic_model.fit_transform(titres)
+        umap_embeddings = compute_or_load_umap(embeddings, umap_params)
+        pbar.update(1)
 
-    nb_bruit_avant = sum(1 for t in topics if t == -1)
-    print(f"Articles en bruit avant reduce_outliers : {nb_bruit_avant}/{len(topics)} ({100*nb_bruit_avant/len(topics):.1f}%)")
+        hdbscan_model = HDBSCAN(
+            min_cluster_size=50,
+            min_samples=5,
+            metric='euclidean',
+            prediction_data=True
+        )
+        pbar.update(1)
 
-    topics = topic_model.reduce_outliers(titres, topics, strategy="c-tf-idf", threshold=0.1)
-    topic_model.update_topics(titres, topics=topics)
 
-    nb_bruit_apres = sum(1 for t in topics if t == -1)
-    print(f"Articles en bruit après reduce_outliers  : {nb_bruit_apres}/{len(topics)} ({100*nb_bruit_apres/len(topics):.1f}%)")
+        # Initialisation et entraînement de BERTopic
+        topic_model = BERTopic(
+            embedding_model=embedding_model,
+            umap_model=umap_embeddings,
+            hdbscan_model=hdbscan_model,
+            vectorizer_model=vectorizer_model,
+            min_topic_size=50,
+            language="multilingual"
+        )
+        pbar.update(1)
+        topics, _ = topic_model.fit_transform(titres)
 
-    # Assigner l'ID du sujet à chaque article dans le DataFrame
-    df['id_sujet'] = topics
+        nb_bruit_avant = sum(1 for t in topics if t == -1)
+        print(f"Articles en bruit avant reduce_outliers : {nb_bruit_avant}/{len(topics)} ({100*nb_bruit_avant/len(topics):.1f}%)")
 
-    # Récupérer le nom du sujet généré par BERTopic
-    topic_info = topic_model.get_topic_info() #renvoie un DataFrame avec les ids des sujets Topic leurs noms et autres infos
-    dict_IdNoms = dict(zip(topic_info['Topic'], topic_info['Name'])) #crée un dictionnaire {id : nom du sujet}
-    df['nom_sujet'] = df['id_sujet'].map(dict_IdNoms)
+        topics = topic_model.reduce_outliers(titres, topics, strategy="c-tf-idf", threshold=0.1)
+        topic_model.update_topics(titres, topics=topics)
 
-    # Nombre d'articles et liste des IDs par sujet
-    resume_bertopic = df.groupby(['id_sujet', 'nom_sujet']).agg(
-        nombre_articles=('id_article', 'count'),
-        liste_ids_articles=('id_article', lambda x: list(x))
-    ).reset_index()
+        nb_bruit_apres = sum(1 for t in topics if t == -1)
+        print(f"Articles en bruit après reduce_outliers  : {nb_bruit_apres}/{len(topics)} ({100*nb_bruit_apres/len(topics):.1f}%)")
 
-    # Sauvegarder le petit tableau résumé du compte des articles
-    resume_bertopic.to_excel(f"{OUTPUT_DIR}/resume_bertopic.xlsx", index=False)
-    # Sauvegarder les données avec les nouvelles colonnes 'id_sujet' et 'nom_sujet'
-    df.to_excel(f"{OUTPUT_DIR}/clustering_bertopic.xlsx", index=False)
+        # Assigner l'ID du sujet à chaque article dans le DataFrame
+        df['id_sujet'] = topics
 
-    print("Les fichiers du modèle BERTopic ont été sauvegardés !")
+        topic_info = topic_model.get_topic_info()
+        dict_IdNoms = dict(zip(topic_info['Topic'], topic_info['Name']))
+        df['nom_sujet'] = df['id_sujet'].map(dict_IdNoms)
 
-    #Affichage du résultat final
-    print("Résultat BERTopic")
-    print(resume_bertopic.head())
+        resume_bertopic = df.groupby(['id_sujet', 'nom_sujet']).agg(
+            nombre_articles=('id_article', 'count'),
+            liste_ids_articles=('id_article', lambda x: list(x))
+        ).reset_index()
 
-    return df, resume_bertopic
+        pbar.update(1)
+        # Sauvegarder le petit tableau résumé du compte des articles
+        resume_bertopic.to_excel(f"{OUTPUT_DIR}/resume_bertopic.xlsx", index=False)
+        # Sauvegarder les données avec les nouvelles colonnes 'id_sujet' et 'nom_sujet'
+        df.to_excel(f"{OUTPUT_DIR}/clustering_bertopic.xlsx", index=False)
+
+        pbar.update(1)
+
+        print("Les fichiers du modèle BERTopic ont été sauvegardés !")
+        return df, resume_bertopic
+
+
