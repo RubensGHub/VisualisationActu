@@ -5,6 +5,18 @@ from sentence_transformers import SentenceTransformer
 from umap import UMAP
 from hdbscan import HDBSCAN
 
+from bokeh.plotting import figure, output_file, save
+from bokeh.models import (
+    ColumnDataSource,
+    HoverTool,
+    TapTool,
+    CustomJS,
+    Div,
+    Text,
+)
+from bokeh.layouts import row
+from bokeh.palettes import Turbo256
+
 OUTPUT_DIR = "data/output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -18,6 +30,7 @@ def charger_donnees(path):
 
     # Extraction des titres sous forme de liste pour les modèles NLP
     titres = df["titre"].tolist()
+    print(df)
     return df, titres
 
 
