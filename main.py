@@ -1,7 +1,4 @@
-from clustering import charger_donnees, clusteriser_bertopic, clusteriser_pipelineClassique
-
-
-
+from clustering import charger_donnees, clusteriser_bertopic
 
 
 if __name__ == "__main__":
@@ -11,9 +8,4 @@ if __name__ == "__main__":
 
     # Clusterisation avec BERTopic
     print("Clusterisation avec BERTopic...")
-    df_bertopic, resume_bertopic = clusteriser_bertopic(df.copy(), titres)
-    
-    print("Clusterisation avec pipeline classique...")
-    # Clusterisation avec pipeline classique (Embeddings + UMAP + HDBSCAN + TF-IDF)   
-    df_classique, resume_classique = clusteriser_pipelineClassique(df.copy(), titres) 
-   
+    df_bertopic, resume_bertopic = clusteriser_bertopic(df, titres)
