@@ -1,4 +1,5 @@
 import os
+import os
 import pandas as pd
 from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
@@ -88,6 +89,8 @@ def clusteriser_bertopic(df, titres):
     - Utilisation d'un modèle d'embedding multilingue pour mieux gérer les titres en français
     - UMAP et HDBSCAN configurés pour réduire le bruit (articles classés -1)
     - Réduction des outliers post-hoc avec reduce_outliers()
+    - UMAP et HDBSCAN configurés pour réduire le bruit (articles classés -1)
+    - Réduction des outliers post-hoc avec reduce_outliers()
     - Assignation des IDs et noms de sujets à chaque article
     - Agrégation du nombre d'articles et des IDs par sujet
     Résultat : un DataFrame avec les sujets identifiés et un résumé du nombre d'articles par sujet
@@ -112,7 +115,7 @@ def clusteriser_bertopic(df, titres):
         pbar.update(1)
 
         umap_params = {
-            "n_neighbors": 20,
+            "n_neighbors": 10,
             "n_components": 5,
             "metric": "cosine",
             "random_state": 42
