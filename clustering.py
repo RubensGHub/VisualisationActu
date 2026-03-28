@@ -56,10 +56,10 @@ def clusteriser_bertopic(df, titres):
         random_state=42
     )
 
-    # HDBSCAN personnalisé : min_cluster_size bas pour permettre de petits clusters
+    # HDBSCAN : min_cluster_size élevé pour éviter les micro-clusters
     hdbscan_model = HDBSCAN(
-        min_cluster_size=5,
-        min_samples=2,
+        min_cluster_size=50,
+        min_samples=5,
         metric='euclidean',
         prediction_data=True
     )
@@ -69,16 +69,19 @@ def clusteriser_bertopic(df, titres):
         embedding_model=embedding_model,
         umap_model=umap_model,
         hdbscan_model=hdbscan_model,
-        min_topic_size=3,
+        min_topic_size=50,
         language="multilingual"
     )
-    topics, probs = topic_model.fit_transform(titres)
+    topics, _ = topic_model.fit_transform(titres)
 
-    topics = topic_model.reduce_outliers(titres, topics, probabilities=probs, strategy="probabilities")
+    nb_bruit_avant = sum(1 for t in topics if t == -1)
+    print(f"Articles en bruit avant reduce_outliers : {nb_bruit_avant}/{len(topics)} ({100*nb_bruit_avant/len(topics):.1f}%)")
+
+    topics = topic_model.reduce_outliers(titres, topics, strategy="c-tf-idf", threshold=0.1)
     topic_model.update_topics(titres, topics=topics)
 
-    nb_bruit = sum(1 for t in topics if t == -1)
-    print(f"Articles restant en bruit après reduce_outliers : {nb_bruit}/{len(topics)} ({100*nb_bruit/len(topics):.1f}%)")
+    nb_bruit_apres = sum(1 for t in topics if t == -1)
+    print(f"Articles en bruit après reduce_outliers  : {nb_bruit_apres}/{len(topics)} ({100*nb_bruit_apres/len(topics):.1f}%)")
 
     # Assigner l'ID du sujet à chaque article dans le DataFrame
     df['id_sujet'] = topics
