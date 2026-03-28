@@ -1,5 +1,4 @@
 import os
-import os
 import pandas as pd
 from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
@@ -10,6 +9,24 @@ import hashlib
 import json
 import numpy as np
 import os
+import nltk
+from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import CountVectorizer
+
+from bokeh.plotting import figure, output_file, save
+from bokeh.models import (
+    ColumnDataSource,
+    HoverTool,
+    TapTool,
+    CustomJS,
+    Div,
+    Text,
+)
+from bokeh.layouts import row
+from bokeh.palettes import Turbo256
+nltk.download('stopwords', quiet=True)
+mots_vides_fr = stopwords.words('french')
+mots_vides_fr.extend(['euros', 'euro', 'dollars', 'dollar', 'milliards', 'millions', 'mds', 'plus', 'très', 'cette', 'cet', 'comme', 'tout', 'faire', 'ça', 'ont', 'être'])
 
 
 
@@ -90,13 +107,17 @@ def clusteriser_bertopic(df, titres):
     - Utilisation d'un modèle d'embedding multilingue pour mieux gérer les titres en français
     - UMAP et HDBSCAN configurés pour réduire le bruit (articles classés -1)
     - Réduction des outliers post-hoc avec reduce_outliers()
-    - UMAP et HDBSCAN configurés pour réduire le bruit (articles classés -1)
-    - Réduction des outliers post-hoc avec reduce_outliers()
     - Assignation des IDs et noms de sujets à chaque article
     - Agrégation du nombre d'articles et des IDs par sujet
     Résultat : un DataFrame avec les sujets identifiés et un résumé du nombre d'articles par sujet
     Retourne les résultats et les sauvegarde dans des fichiers Excel
     """
+
+     # Création du Vectorizer avec le filtre anti-chiffres et les mots vides
+    vectorizer_model = CountVectorizer(
+        stop_words=mots_vides_fr,
+        token_pattern=r"(?u)\b[a-zA-ZÀ-ÿ]{3,}\b" # Ignore les nombres et garde les mots >= 3 lettres
+    )
     steps = [
         "Chargement du modèle d'embedding",
         "Création UMAP",
@@ -133,28 +154,30 @@ def clusteriser_bertopic(df, titres):
         )
         pbar.update(1)
 
-        topic_model = BERTopic(
-            hdbscan_model=hdbscan_model,
-            min_topic_size=3,
-            language="multilingual"
-        )
-        pbar.update(1)
 
-        topics, probs = topic_model.fit_transform(titres, umap_embeddings)
-        pbar.update(1)
+    # Initialisation et entraînement de BERTopic
+    topic_model = BERTopic(
+        embedding_model=embedding_model,
+        umap_model=umap_embeddings,
+        hdbscan_model=hdbscan_model,
+        vectorizer_model=vectorizer_model,
+        min_topic_size=50,
+        language="multilingual"
+    )
+    pbar.update(1)
+    topics, _ = topic_model.fit_transform(titres)
 
+    nb_bruit_avant = sum(1 for t in topics if t == -1)
+    print(f"Articles en bruit avant reduce_outliers : {nb_bruit_avant}/{len(topics)} ({100*nb_bruit_avant/len(topics):.1f}%)")
 
-        topics = topic_model.reduce_outliers(
-            titres, topics, probabilities=probs, strategy="probabilities"
-        )
-        pbar.update(1)
+    topics = topic_model.reduce_outliers(titres, topics, strategy="c-tf-idf", threshold=0.1)
+    topic_model.update_topics(titres, topics=topics)
 
-        topic_model.update_topics(titres, topics=topics)
-        pbar.update(1)
+    nb_bruit_apres = sum(1 for t in topics if t == -1)
+    print(f"Articles en bruit après reduce_outliers  : {nb_bruit_apres}/{len(topics)} ({100*nb_bruit_apres/len(topics):.1f}%)")
 
-        nb_bruit = sum(1 for t in topics if t == -1)
-
-        df['id_sujet'] = topics
+    # Assigner l'ID du sujet à chaque article dans le DataFrame
+    df['id_sujet'] = topics
 
         topic_info = topic_model.get_topic_info()
         dict_IdNoms = dict(zip(topic_info['Topic'], topic_info['Name']))
@@ -166,11 +189,14 @@ def clusteriser_bertopic(df, titres):
         ).reset_index()
 
         pbar.update(1)
-
+        # Sauvegarder le petit tableau résumé du compte des articles
         resume_bertopic.to_excel(f"{OUTPUT_DIR}/resume_bertopic.xlsx", index=False)
+        # Sauvegarder les données avec les nouvelles colonnes 'id_sujet' et 'nom_sujet'
         df.to_excel(f"{OUTPUT_DIR}/clustering_bertopic.xlsx", index=False)
 
         pbar.update(1)
 
-    print(f"Articles restant en bruit : {nb_bruit}/{len(topics)}")
+    print("Les fichiers du modèle BERTopic ont été sauvegardés !")
     return df, resume_bertopic
+
+
