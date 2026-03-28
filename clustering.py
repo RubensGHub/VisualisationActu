@@ -158,14 +158,13 @@ def clusteriser_bertopic(df, titres):
         # Initialisation et entraînement de BERTopic
         topic_model = BERTopic(
             embedding_model=embedding_model,
-            umap_model=umap_embeddings,
             hdbscan_model=hdbscan_model,
             vectorizer_model=vectorizer_model,
             min_topic_size=50,
             language="multilingual"
         )
         pbar.update(1)
-        topics, _ = topic_model.fit_transform(titres)
+        topics, _ = topic_model.fit_transform(titres, umap_embeddings)
 
         nb_bruit_avant = sum(1 for t in topics if t == -1)
         print(f"Articles en bruit avant reduce_outliers : {nb_bruit_avant}/{len(topics)} ({100*nb_bruit_avant/len(topics):.1f}%)")
