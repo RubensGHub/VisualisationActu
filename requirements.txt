@@ -6,3 +6,6 @@ scikit-learn
 openpyxl
 Pillow==9.1.1
 bokeh
+umap-learn
+hdbscan
+nltk
