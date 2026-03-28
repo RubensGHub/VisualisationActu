@@ -12,7 +12,6 @@ import os
 import nltk
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer
-
 from bokeh.plotting import figure, output_file, save
 from bokeh.models import (
     ColumnDataSource,
@@ -24,6 +23,8 @@ from bokeh.models import (
 )
 from bokeh.layouts import row
 from bokeh.palettes import Turbo256
+
+
 nltk.download('stopwords', quiet=True)
 mots_vides_fr = stopwords.words('french')
 mots_vides_fr.extend(['euros', 'euro', 'dollars', 'dollar', 'milliards', 'millions', 'mds', 'plus', 'très', 'cette', 'cet', 'comme', 'tout', 'faire', 'ça', 'ont', 'être'])
@@ -54,7 +55,6 @@ def charger_donnees(path):
 
     # Extraction des titres sous forme de liste pour les modèles NLP
     titres = df["titre"].tolist()
-    print(df)
     return df, titres
 
 
@@ -155,29 +155,29 @@ def clusteriser_bertopic(df, titres):
         pbar.update(1)
 
 
-    # Initialisation et entraînement de BERTopic
-    topic_model = BERTopic(
-        embedding_model=embedding_model,
-        umap_model=umap_embeddings,
-        hdbscan_model=hdbscan_model,
-        vectorizer_model=vectorizer_model,
-        min_topic_size=50,
-        language="multilingual"
-    )
-    pbar.update(1)
-    topics, _ = topic_model.fit_transform(titres)
+        # Initialisation et entraînement de BERTopic
+        topic_model = BERTopic(
+            embedding_model=embedding_model,
+            umap_model=umap_embeddings,
+            hdbscan_model=hdbscan_model,
+            vectorizer_model=vectorizer_model,
+            min_topic_size=50,
+            language="multilingual"
+        )
+        pbar.update(1)
+        topics, _ = topic_model.fit_transform(titres)
 
-    nb_bruit_avant = sum(1 for t in topics if t == -1)
-    print(f"Articles en bruit avant reduce_outliers : {nb_bruit_avant}/{len(topics)} ({100*nb_bruit_avant/len(topics):.1f}%)")
+        nb_bruit_avant = sum(1 for t in topics if t == -1)
+        print(f"Articles en bruit avant reduce_outliers : {nb_bruit_avant}/{len(topics)} ({100*nb_bruit_avant/len(topics):.1f}%)")
 
-    topics = topic_model.reduce_outliers(titres, topics, strategy="c-tf-idf", threshold=0.1)
-    topic_model.update_topics(titres, topics=topics)
+        topics = topic_model.reduce_outliers(titres, topics, strategy="c-tf-idf", threshold=0.1)
+        topic_model.update_topics(titres, topics=topics)
 
-    nb_bruit_apres = sum(1 for t in topics if t == -1)
-    print(f"Articles en bruit après reduce_outliers  : {nb_bruit_apres}/{len(topics)} ({100*nb_bruit_apres/len(topics):.1f}%)")
+        nb_bruit_apres = sum(1 for t in topics if t == -1)
+        print(f"Articles en bruit après reduce_outliers  : {nb_bruit_apres}/{len(topics)} ({100*nb_bruit_apres/len(topics):.1f}%)")
 
-    # Assigner l'ID du sujet à chaque article dans le DataFrame
-    df['id_sujet'] = topics
+        # Assigner l'ID du sujet à chaque article dans le DataFrame
+        df['id_sujet'] = topics
 
         topic_info = topic_model.get_topic_info()
         dict_IdNoms = dict(zip(topic_info['Topic'], topic_info['Name']))
@@ -196,7 +196,7 @@ def clusteriser_bertopic(df, titres):
 
         pbar.update(1)
 
-    print("Les fichiers du modèle BERTopic ont été sauvegardés !")
-    return df, resume_bertopic
+        print("Les fichiers du modèle BERTopic ont été sauvegardés !")
+        return df, resume_bertopic
 
 
