@@ -3,4 +3,7 @@ sentence-transformers
 pandas
 numpy
 scikit-learn
+nltk
+umap-learn
+hdbscan
 openpyxl

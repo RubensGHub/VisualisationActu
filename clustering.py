@@ -4,10 +4,16 @@ from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
 from umap import UMAP
 from hdbscan import HDBSCAN
+import nltk
+from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import CountVectorizer
 
 OUTPUT_DIR = "data/output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+nltk.download('stopwords', quiet=True)
+mots_vides_fr = stopwords.words('french')
+mots_vides_fr.extend(['euros', 'euro', 'dollars', 'dollar', 'milliards', 'millions', 'mds', 'plus', 'très', 'cette', 'cet', 'comme', 'tout', 'faire', 'ça', 'ont', 'être'])
 
 
 def charger_donnees(path):
@@ -32,6 +38,12 @@ def clusteriser_bertopic(df, titres):
     Résultat : un DataFrame avec les sujets identifiés et un résumé du nombre d'articles par sujet
     Retourne les résultats et les sauvegarde dans des fichiers Excel
     """
+    
+    # Création du Vectorizer avec le filtre anti-chiffres et les mots vides
+    vectorizer_model = CountVectorizer(
+        stop_words=mots_vides_fr,
+        token_pattern=r"(?u)\b[a-zA-ZÀ-ÿ]{3,}\b" # Ignore les nombres et garde les mots >= 3 lettres
+    )
     # Choix du modèle d'embedding multilingue pour mieux gérer les titres en français
     embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
 
@@ -45,7 +57,7 @@ def clusteriser_bertopic(df, titres):
 
     # HDBSCAN personnalisé : min_cluster_size bas pour permettre de petits clusters
     hdbscan_model = HDBSCAN(
-        min_cluster_size=5,
+        min_cluster_size=50,
         min_samples=2,
         metric='euclidean',
         prediction_data=True
@@ -56,16 +68,11 @@ def clusteriser_bertopic(df, titres):
         embedding_model=embedding_model,
         umap_model=umap_model,
         hdbscan_model=hdbscan_model,
+        vectorizer_model=vectorizer_model,
         min_topic_size=3,
         language="multilingual"
     )
     topics, probs = topic_model.fit_transform(titres)
-
-    topics = topic_model.reduce_outliers(titres, topics, probabilities=probs, strategy="probabilities")
-    topic_model.update_topics(titres, topics=topics)
-
-    nb_bruit = sum(1 for t in topics if t == -1)
-    print(f"Articles restant en bruit après reduce_outliers : {nb_bruit}/{len(topics)} ({100*nb_bruit/len(topics):.1f}%)")
 
     # Assigner l'ID du sujet à chaque article dans le DataFrame
     df['id_sujet'] = topics
