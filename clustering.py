@@ -156,27 +156,27 @@ def clusteriser_bertopic(df, titres):
         pbar.update(1)
 
 
-    seed_topic_list = [
-        ["nucléaire"],
-        ["politique"],
-        ["éolien"],
-        ["solaire"],
-        ["énergie renouvelable"],
-        ["aviation"],
-        ["gaz"],
-        ["pétrole"],
-        ["loi"],
-        ["carbone"],
-        ["véhicule"],
-        ["électrique"],
-        ["tarif"],
-        ["bâtiment"],
-        ["CO2"],
-        ["climat"],
-        ["eau"],
-        ["frugal"],
-        ["IA"],
-    ]
+        seed_topic_list = [
+            ["nucléaire"],
+            ["politique"],
+            ["éolien"],
+            ["solaire"],
+            ["énergie renouvelable"],
+            ["aviation"],
+            ["gaz"],
+            ["pétrole"],
+            ["loi"],
+            ["carbone"],
+            ["véhicule"],
+            ["électrique"],
+            ["tarif"],
+            ["bâtiment"],
+            ["CO2"],
+            ["climat"],
+            ["eau"],
+            ["frugal"],
+            ["IA"],
+        ]
 
         # Initialisation et entraînement de BERTopic
         topic_model = BERTopic(
