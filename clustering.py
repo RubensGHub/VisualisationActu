@@ -55,6 +55,7 @@ def charger_donnees(path):
 
     # Extraction des titres sous forme de liste pour les modèles NLP
     titres = df["titre"].tolist()
+    print(df)
     return df, titres
 
 
@@ -155,13 +156,36 @@ def clusteriser_bertopic(df, titres):
         pbar.update(1)
 
 
+    seed_topic_list = [
+        ["nucléaire"],
+        ["politique"],
+        ["éolien"],
+        ["solaire"],
+        ["énergie renouvelable"],
+        ["aviation"],
+        ["gaz"],
+        ["pétrole"],
+        ["loi"],
+        ["carbone"],
+        ["véhicule"],
+        ["électrique"],
+        ["tarif"],
+        ["bâtiment"],
+        ["CO2"],
+        ["climat"],
+        ["eau"],
+        ["frugal"],
+        ["IA"],
+    ]
+
         # Initialisation et entraînement de BERTopic
         topic_model = BERTopic(
             embedding_model=embedding_model,
             hdbscan_model=hdbscan_model,
             vectorizer_model=vectorizer_model,
             min_topic_size=50,
-            language="multilingual"
+            language="multilingual",
+        seed_topic_list=seed_topic_list
         )
         pbar.update(1)
         topics, _ = topic_model.fit_transform(titres, umap_embeddings)
