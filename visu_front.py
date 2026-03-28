@@ -21,7 +21,11 @@ def visualisation_chart(df_bertopic, resume_bertopic):
     print("resume_bertopic : \n\n")
     print(resume_bertopic)
 
-
+    # rajout des titres des articles dans résu
+    id_to_titre = df_bertopic.set_index("id_article")["titre"].to_dict()
+    resume_bertopic["liste_titres"] = resume_bertopic["liste_ids_articles"].apply(
+        lambda ids: [id_to_titre[i] for i in ids if i in id_to_titre]
+    )
 
 
     # Taille des bulles :  sqrt(nb articles)
@@ -67,7 +71,7 @@ def visualisation_chart(df_bertopic, resume_bertopic):
         y_range=(-lim, lim),
         match_aspect=True,
         toolbar_location="above",
-        title="Clusters d'articles — BERTopic",
+        title="Clusters d'articles sur l'actualité de la transition énergétique",
         sizing_mode="stretch_both",
     )
     p.axis.visible = p.grid.visible = False

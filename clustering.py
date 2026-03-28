@@ -12,17 +12,6 @@ import os
 import nltk
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer
-from bokeh.plotting import figure, output_file, save
-from bokeh.models import (
-    ColumnDataSource,
-    HoverTool,
-    TapTool,
-    CustomJS,
-    Div,
-    Text,
-)
-from bokeh.layouts import row
-from bokeh.palettes import Turbo256
 
 
 nltk.download('stopwords', quiet=True)
