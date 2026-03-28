@@ -1,8 +1,12 @@
+import os
 import pandas as pd
 from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
 from umap import UMAP
 from hdbscan import HDBSCAN
+
+OUTPUT_DIR = "data/output"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 
@@ -57,7 +61,7 @@ def clusteriser_bertopic(df, titres):
     )
     topics, probs = topic_model.fit_transform(titres)
 
-    topics = topic_model.reduce_outliers(titres, topics, strategy="probabilities")
+    topics = topic_model.reduce_outliers(titres, topics, probabilities=probs, strategy="probabilities")
     topic_model.update_topics(titres, topics=topics)
 
     nb_bruit = sum(1 for t in topics if t == -1)
@@ -78,9 +82,9 @@ def clusteriser_bertopic(df, titres):
     ).reset_index()
 
     # Sauvegarder le petit tableau résumé du compte des articles
-    resume_bertopic.to_excel("resume_bertopic.xlsx", index=False)
-    # sauvgarder les données avec les nouvelles colonnes 'id_sujet' et 'nom_sujet'
-    df.to_excel("clustering_bertopic.xlsx", index=False)
+    resume_bertopic.to_excel(f"{OUTPUT_DIR}/resume_bertopic.xlsx", index=False)
+    # Sauvegarder les données avec les nouvelles colonnes 'id_sujet' et 'nom_sujet'
+    df.to_excel(f"{OUTPUT_DIR}/clustering_bertopic.xlsx", index=False)
 
     print("Les fichiers du modèle BERTopic ont été sauvegardés !")
 
