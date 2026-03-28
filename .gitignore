@@ -213,5 +213,6 @@ __marimo__/
 *test*
 
 # Data
-data/output/*.xlsx
+data/output/*
+
 *.xlsx
