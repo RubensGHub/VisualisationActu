@@ -55,35 +55,16 @@ def charger_donnees(path):
 
     # Extraction des titres sous forme de liste pour les modèles NLP
     titres = df["titre"].tolist()
-    print(df)
     return df, titres
 
 
-def compute_or_load_umap(embeddings, umap_params, cache_dir="cache"):
-    os.makedirs(cache_dir, exist_ok=True)
 
-    # Hash basé sur les paramètres
-    hash_id = get_umap_hash(umap_params)
-    cache_file = f"{cache_dir}/umap_{hash_id}.npy"
-
-    if os.path.exists(cache_file):
-        print("Chargement UMAP depuis le cache...")
-        return np.load(cache_file)
-
-    print("Calcul UMAP...")
-    umap_model = UMAP(**umap_params)
-    reduced = umap_model.fit_transform(embeddings)
-
-    np.save(cache_file, reduced)
-    print("UMAP sauvegardé.")
-
-    return reduced
 
 
 def compute_or_load_embeddings(titres, model, cache_dir="cache"):
     os.makedirs(cache_dir, exist_ok=True)
 
-    model_name = model.get_sentence_embedding_dimension()  # ou nom manuel
+    model_name = model.get_sentence_embedding_dimension()  
     hash_id = get_embedding_hash(titres, str(model_name))
 
     cache_file = f"{cache_dir}/embeddings_{hash_id}.npy"
@@ -137,14 +118,12 @@ def clusteriser_bertopic(df, titres):
         embeddings = compute_or_load_embeddings(titres, embedding_model)
         pbar.update(1)
 
-        umap_params = {
-            "n_neighbors": 20,
-            "n_components": 5,
-            "metric": "cosine",
-            "random_state": 42
-        }
-
-        umap_embeddings = compute_or_load_umap(embeddings, umap_params)
+        umap_model = UMAP(
+            n_neighbors=20,
+            n_components=5,
+            metric="cosine",
+            random_state=42
+        )
         pbar.update(1)
 
         hdbscan_model = HDBSCAN(
@@ -156,57 +135,57 @@ def clusteriser_bertopic(df, titres):
         pbar.update(1)
 
 
-    seed_topic_list = [
-        ["nucléaire"],
-        ["politique"],
-        ["éolien"],
-        ["solaire"],
-        ["énergie renouvelable"],
-        ["aviation"],
-        ["gaz"],
-        ["pétrole"],
-        ["loi"],
-        ["carbone"],
-        ["véhicule"],
-        ["électrique"],
-        ["tarif"],
-        ["bâtiment"],
-        ["CO2"],
-        ["climat"],
-        ["eau"],
-        ["frugal"],
-        ["IA"],
-    ]
+        seed_topic_list = [
+            ["nucléaire"],
+            ["politique"],
+            ["éolien"],
+            ["solaire"],
+            ["énergie renouvelable"],
+            ["aviation"],
+            ["gaz"],
+            ["pétrole"],
+            ["loi"],
+            ["carbone"],
+            ["véhicule"],
+            ["électrique"],
+            ["tarif"],
+            ["bâtiment"],
+            ["CO2"],
+            ["climat"],
+            ["eau"],
+            ["frugal"],
+            ["IA"],
+        ]
 
         # Initialisation et entraînement de BERTopic
         topic_model = BERTopic(
             embedding_model=embedding_model,
-            umap_model=umap_embeddings,
+            umap_model=umap_model,
             hdbscan_model=hdbscan_model,
             vectorizer_model=vectorizer_model,
             min_topic_size=50,
             language="multilingual",
-        seed_topic_list=seed_topic_list
+            seed_topic_list=seed_topic_list
         )
         pbar.update(1)
-        topics, _ = topic_model.fit_transform(titres)
 
+        topics, _ = topic_model.fit_transform(titres, embeddings)
         nb_bruit_avant = sum(1 for t in topics if t == -1)
         print(f"Articles en bruit avant reduce_outliers : {nb_bruit_avant}/{len(topics)} ({100*nb_bruit_avant/len(topics):.1f}%)")
-
+        pbar.update(1)
         topics = topic_model.reduce_outliers(titres, topics, strategy="c-tf-idf", threshold=0.1)
         topic_model.update_topics(titres, topics=topics)
-
+        pbar.update(1)
         nb_bruit_apres = sum(1 for t in topics if t == -1)
         print(f"Articles en bruit après reduce_outliers  : {nb_bruit_apres}/{len(topics)} ({100*nb_bruit_apres/len(topics):.1f}%)")
-
+        pbar.update(1)
         # Assigner l'ID du sujet à chaque article dans le DataFrame
         df['id_sujet'] = topics
 
         topic_info = topic_model.get_topic_info()
         dict_IdNoms = dict(zip(topic_info['Topic'], topic_info['Name']))
         df['nom_sujet'] = df['id_sujet'].map(dict_IdNoms)
-
+        
         resume_bertopic = df.groupby(['id_sujet', 'nom_sujet']).agg(
             nombre_articles=('id_article', 'count'),
             liste_ids_articles=('id_article', lambda x: list(x))
@@ -222,5 +201,4 @@ def clusteriser_bertopic(df, titres):
 
         print("Les fichiers du modèle BERTopic ont été sauvegardés !")
         return df, resume_bertopic
-
 
