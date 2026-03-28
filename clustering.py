@@ -37,6 +37,7 @@ def charger_donnees(path):
 
     # Extraction des titres sous forme de liste pour les modèles NLP
     titres = df["titre"].tolist()
+    print(df)
     return df, titres
 
 
