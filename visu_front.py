@@ -224,7 +224,7 @@ def visualisation_chart(df, resume):
             rs_s.append(s["rayon_sous"])
  
             parts = s["nom_sujet"].split("_")
-            label = " / ".join(parts[1:4])[:28] if len(parts) > 1 else s["nom_sujet"][:28]
+            label = " / ".join(parts[1:4]) if len(parts) > 1 else s["nom_sujet"]
             noms_s.append(label)
             nbs_s.append(int(s["nombre_articles"]))
             couleurs_s.append(coul)
@@ -277,7 +277,7 @@ def visualisation_chart(df, resume):
     # Label des grosses bulles (au centre)
     p.text(
         x="x", y="y", text="nom",
-        text_color="couleur",
+        text_color="white",
         text_font_size="18px",
         text_font_style="bold",
         text_align="center",
