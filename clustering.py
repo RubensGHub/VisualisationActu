@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 from umap import UMAP
 from hdbscan import HDBSCAN
 from tqdm import tqdm
@@ -18,6 +19,7 @@ nltk.download('stopwords', quiet=True)
 mots_vides_fr = stopwords.words('french')
 mots_vides_fr.extend(['euros', 'euro', 'dollars', 'dollar', 'milliards', 'millions', 'mds', 'plus', 'très', 'cette', 'cet', 'comme', 'tout', 'faire', 'ça', 'ont', 'être'])
 
+MACRO_THEMES = ["nucléaire", "politique", "énergie renouvelable", "aviation","gaz", "pétrole", "loi", "carbone", "véhicule", "électrique","bâtiment", "CO2", "climat", "eau", "frugal", "IA",]
 
 
 OUTPUT_DIR = "data/output"
@@ -124,27 +126,7 @@ def clusteriser_bertopic(df, titres):
         pbar.update(1)
 
 
-        seed_topic_list = [
-            ["nucléaire"],
-            ["politique"],
-            ["éolien"],
-            ["solaire"],
-            ["énergie renouvelable"],
-            ["aviation"],
-            ["gaz"],
-            ["pétrole"],
-            ["loi"],
-            ["carbone"],
-            ["véhicule"],
-            ["électrique"],
-            ["tarif"],
-            ["bâtiment"],
-            ["CO2"],
-            ["climat"],
-            ["eau"],
-            ["frugal"],
-            ["IA"],
-        ]
+        seed_topic_list = [[theme] for theme in MACRO_THEMES]
 
         # Initialisation et entraînement de BERTopic
         topic_model = BERTopic(
@@ -189,5 +171,58 @@ def clusteriser_bertopic(df, titres):
         pbar.update(1)
 
         print("Les fichiers du modèle BERTopic ont été sauvegardés !")
-        return df, resume_bertopic
+        return df, resume_bertopic, topic_model, embedding_model
 
+def macro_clustering(df, topic_model, embedding_model, seuil_similarite=0.3):
+    """
+    Associe les sous-clusters générés par BERTopic à la liste prédéfinie de macro-thèmes.
+    """
+     
+    # Calculer les embeddings des grandes catégories
+    print("Calcul des vecteurs pour les macro-thèmes...")
+    macro_embeddings = embedding_model.encode(MACRO_THEMES)
+    
+    # Récupérer les infos des sujets
+    topic_info = topic_model.get_topic_info()
+    dict_macro_mapping = {}
+    
+    # Associer chaque sous-cluster
+    for index, row in topic_info.iterrows():
+        topic_id = row['Topic']
+        
+        if topic_id == -1:
+            dict_macro_mapping[topic_id] = "Bruit"
+            continue
+            
+        # Extraire les mots clés de ce sous-cluster
+        words = [word for word, score in topic_model.get_topic(topic_id)]
+        topic_text = " ".join(words[:5]) 
+        
+        # Calculer la similarité cosinus
+        topic_emb = embedding_model.encode([topic_text])
+        similarities = cosine_similarity(topic_emb, macro_embeddings)[0]
+        
+        # Trouver le meilleur match
+        best_match_idx = np.argmax(similarities)
+        best_match_score = similarities[best_match_idx]
+        
+        if best_match_score > seuil_similarite:
+            dict_macro_mapping[topic_id] = MACRO_THEMES[best_match_idx]
+        else:
+            dict_macro_mapping[topic_id] = "Autre"
+            
+    # Appliquer au DataFrame
+    df['macro_sujet'] = df['id_sujet'].map(dict_macro_mapping)
+    
+    # Créer le résumé 
+    print("Génération du tableau résumé...")
+    resume_macro = df.groupby(['macro_sujet', 'id_sujet', 'nom_sujet']).agg(
+        nombre_articles=('id_article', 'count'),
+        liste_ids_articles=('id_article', lambda x: list(x))
+    ).reset_index()
+
+    resume_macro.to_excel(f"{OUTPUT_DIR}/resume_clustering_macro.xlsx", index=False)
+    
+    print("Fichier sauvegardé avec succès !")
+    print("Clustering terminé avec succès !")
+    return df, resume_macro
