@@ -17,6 +17,6 @@ if __name__ == "__main__":
 
     # Front : 
     print("Génération du front...")    
-    visualisation_chart(df_bertopic, resume_macro)
+    visualisation_chart(df_macro, resume_macro)
 
 
