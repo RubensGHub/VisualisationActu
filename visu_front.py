@@ -55,7 +55,7 @@ def _couleurs_variees(n):
     return [Turbo256[i] for i in indices[:n]]
 
 
-def visualisation_chart(df_bertopic, resume_bertopic):
+def visualisation_chart(df, resume):
     output_file(f"{OUTPUT_DIR}/visualisation.html", title="Clustering des articles")
     
 
@@ -66,14 +66,14 @@ def visualisation_chart(df_bertopic, resume_bertopic):
     # print(resume_bertopic)
 
     # rajout des titres des articles dans résu
-    id_to_titre = df_bertopic.set_index("id_article")["titre"].to_dict()
-    resume_bertopic["liste_titres"] = resume_bertopic["liste_ids_articles"].apply(
+    id_to_titre = df.set_index("id_article")["titre"].to_dict()
+    resume["liste_titres"] = resume["liste_ids_articles"].apply(
         lambda ids: [id_to_titre[i] for i in ids if i in id_to_titre]
     )
 
 
     # Taille des bulles :  sqrt(nb articles)
-    df_vis  = resume_bertopic[resume_bertopic["id_sujet"] != -1].reset_index(drop=True)
+    df_vis  = resume[resume["id_sujet"] != -1].reset_index(drop=True)
     n = len(df_vis)
     max_articles = df_vis["nombre_articles"].max()
     R_MAX = 80   # rayon max en coordonnées data
@@ -88,7 +88,8 @@ def visualisation_chart(df_bertopic, resume_bertopic):
 
     for i, (_, s) in enumerate(df_vis.iterrows()):
         parts = s["nom_sujet"].split("_")
-        noms.append(" / ".join(parts[1:4])[:30] if len(parts) > 1 else s["nom_sujet"][:30])
+        noms.append(" / ".join(parts[1:4])[:30] if len(parts) > 1 # ne prend que les 4 mots (pas le chiffre à indice 0)
+                    else s["nom_sujet"][:40]) # taille max de 40 caractères
         nbs.append(int(s["nombre_articles"]))
         couleurs.append(couleurs_palette[i])
  

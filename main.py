@@ -13,8 +13,10 @@ if __name__ == "__main__":
     # Clustering macro
     print("Clustering macro...")
     df_macro, resume_macro = macro_clustering(df_bertopic, topic_model, embedding_model)
+
+
     # Front : 
     print("Génération du front...")    
-    visualisation_chart(df_bertopic, resume_bertopic)
+    visualisation_chart(df_bertopic, resume_macro)
 
 
