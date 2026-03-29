@@ -224,7 +224,7 @@ def visualisation_chart(df, resume):
             rs_s.append(s["rayon_sous"])
  
             parts = s["nom_sujet"].split("_")
-            label = " / ".join(parts[1:4])[:28] if len(parts) > 1 else s["nom_sujet"][:28]
+            label = " / ".join(parts[1:4]) if len(parts) > 1 else s["nom_sujet"]
             noms_s.append(label)
             nbs_s.append(int(s["nombre_articles"]))
             couleurs_s.append(coul)
@@ -277,7 +277,7 @@ def visualisation_chart(df, resume):
     # Label des grosses bulles (au centre)
     p.text(
         x="x", y="y", text="nom",
-        text_color="couleur",
+        text_color="white",
         text_font_size="18px",
         text_font_style="bold",
         text_align="center",
@@ -296,20 +296,14 @@ def visualisation_chart(df, resume):
         selection_line_color="white", selection_line_width=2,
         source=sous_src,
     )
-    p.text(
-        x="x", y="y", text="nom",
-        text_color="white",
-        text_font_size="15px",
-        text_align="center",
-        text_baseline="middle",
-        source=sous_src,
-        level="overlay",
-    )
- 
-    p.add_tools(HoverTool(renderers=[renderer], tooltips=[
-        ("Cluster",  "@nom"),
-        ("Articles", "@nb_articles"),
-    ]))
+    p.add_tools(HoverTool(renderers=[renderer], tooltips="""
+        <div style="font-family:monospace; padding:6px 10px;
+                    background:#1a1a2e; border:1px solid #444; border-radius:6px;
+                    white-space:nowrap">
+            <span style="color:@couleur; font-size:15px; font-weight:bold">@nom</span><br>
+            <span style="color:#888; font-size:11px">@nb_articles articles</span>
+        </div>
+    """))
 
 
 
@@ -319,7 +313,7 @@ def visualisation_chart(df, resume):
         text="<p style='color:#777;font-style:italic;padding:16px;font-family:monospace'>"
              "Cliquez sur une bulle</p>",
         width=320,
-        sizing_mode="fixed",
+        sizing_mode="stretch_height",
         styles={
             "background":  "#0f0f1a",
             "border-left": "2px solid #333",
