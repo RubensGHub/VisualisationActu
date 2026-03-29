@@ -54,7 +54,7 @@ def charger_donnees(path):
 
 def compute_or_load_embeddings(titres, model, cache_dir="cache"):
     os.makedirs(cache_dir, exist_ok=True)
-
+    
     model_name = model.get_sentence_embedding_dimension()  
     hash_id = get_embedding_hash(titres, str(model_name))
 
