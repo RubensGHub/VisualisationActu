@@ -213,7 +213,6 @@ def macro_clustering(df, topic_model, embedding_model, seuil_similarite=0.3):
             
     # Appliquer au DataFrame
     df['macro_sujet'] = df['id_sujet'].map(dict_macro_mapping)
-    
     # Créer le résumé 
     print("Génération du tableau résumé...")
     resume_macro = df.groupby(['macro_sujet', 'id_sujet', 'nom_sujet']).agg(

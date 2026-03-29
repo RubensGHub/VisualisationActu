@@ -13,20 +13,21 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 def visualisation_timeline(df_macro):
     output_file(f"{OUTPUT_DIR}/timeline.html", title="Évolution temporelle")
 
-    df = df_macro[df_macro["clusters"] != "Bruit"].copy()
+    # Filter out noise cluster
+    df = df_macro[df_macro["macro_sujet"] != "Bruit"].copy()
     df["date"] = pd.to_datetime(df["date"])
 
     df["semaine"] = df["date"].dt.to_period("W").dt.start_time
     grouped = (
-        df.groupby(["semaine", "clusters"])
+        df.groupby(["semaine", "macro_sujet"])
         .size()
         .reset_index(name="nb_articles")
     )
 
-    cluster_noms = sorted(grouped["clusters"].unique())
+    cluster_noms = sorted(grouped["macro_sujet"].unique())
 
     TOP_N = 8
-    totaux = grouped.groupby("clusters")["nb_articles"].sum().sort_values(ascending=False)
+    totaux = grouped.groupby("macro_sujet")["nb_articles"].sum().sort_values(ascending=False)
     cluster_noms = [n for n in totaux.index[:TOP_N]]
 
     couleur_macro = {
@@ -62,7 +63,7 @@ def visualisation_timeline(df_macro):
     )
 
     for nom in cluster_noms:
-        data = grouped[grouped["clusters"] == nom].sort_values("semaine")
+        data = grouped[grouped["macro_sujet"] == nom].sort_values("semaine")
         if data.empty:
             continue
         coul = couleur_macro[nom]

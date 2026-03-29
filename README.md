@@ -35,6 +35,7 @@ Ce projet permet de visualiser et analyser l'actualité liée à la transition �
 - `main.py` : Script principal pour exécuter le pipeline complet.
 - `clustering.py` : Fonctions de clusterisation (BERTopic et macro) et de cahrgement des données.
 - `visu_front.py` : Génération des visualisations avec Bokeh.
+- `visu_timeline.py` : Génération de time chart avec Bokeh.
 - `data/` : Dossier pour les données d'entrée et sorties.
 - `cache/` : Cache pour les embeddings.
 - `requirements.txt` : Dépendances Python.
