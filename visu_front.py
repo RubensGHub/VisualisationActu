@@ -23,13 +23,12 @@ MACRO_COLORS = [
     "#A8DADC", 
     "#3A86FF", 
     "#457B9D",  
-    "#452A52",
-    "#9B5DE5",  
+    "#AA00FF",
+    "#CC44FF",  
     "#94008D",
     "#F72585",  
-    "#DA5661",
-    "#4D0314",
-    "#BB0000",
+    "#FF1744",
+    "#FF5252",
 ]
 
 # Permet de mieux répartir les bulles sur le layout afin d'éviter trop de chevauchements

@@ -1,5 +1,6 @@
 from clustering import charger_donnees, clusteriser_bertopic, macro_clustering
 from visu_front import visualisation_chart
+from visu_timeline import visualisation_timeline
 
 
 if __name__ == "__main__":
@@ -18,5 +19,6 @@ if __name__ == "__main__":
     # Front : 
     print("Génération du front...")    
     visualisation_chart(df_macro, resume_macro)
+    visualisation_timeline(df_macro)
 
 
